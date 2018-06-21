@@ -1,22 +1,22 @@
 #include "order.h"
 //#include <algorithm>
 #include <iostream>
+#include "string"
 
 using namespace std;
-
 
 /*Конструктор*/
 template <typename T>
 order_list<T>::order_list() {
     length = 0;
-    head = NULL; //???
-    tail = NULL; //???
+    head = nullptr;
+    tail = nullptr;
 }
 
 /*Деструктор*/
 template <typename T>
-order_list<T>::~order_list() {
-    clear();
+order_list<T>::~order_list(){
+    //clear();
 }
 
 /*Поставить объект item в очередь (в конец списка).*/
@@ -30,7 +30,7 @@ void order_list<T>::enqueue(T item) {
         //head->next = NULL;
         tail = new_node;
     } else {
-        new_node->next = NULL;
+        new_node->next = nullptr;
         tail->next = new_node;
         tail = new_node;
     }
@@ -38,51 +38,165 @@ void order_list<T>::enqueue(T item) {
     length++;
 }
 
-/*Убрать элемент из очереди без возврата значения.*/
+/*Убрать элемент из очереди без возврата значения.
+ *  используется в clear()
+ *  используется в деструкторе
+ */
 template <typename T>
-void order_list<T>::dequeue_withoutReturn() {
+void order_list<T>::dequeue_withoutReturn()
+{
     if (length < 1) {
-        throw std::out_of_range("Out of range"); //Исключение
+        throw std::out_of_range("Out of range");
     }
 
-    node<T>* tmp = head;
+    if (length > 0)
+    {
+        node<T>* tmp = head;
 
-    head = head->next;
-    if(length == 1)
-        tail = NULL;
+        head = head->next;
+        if(length == 1)
+            tail = nullptr;
 
-    delete tmp;
+        delete tmp;
 
-    length--;
+        length--;
+    }
 }
 
-/*Убрать элемент из очереди (достать элемент из начала списка) и вернуть его значение.
- * используется в деструкторе
- * */
+/*Убрать элемент из очереди (достать элемент из начала списка) и вернуть его значение.*/
 template <typename T>
-const T order_list<T>::dequeue(){
+const T order_list<T>::dequeue()
+{
     if (length < 1) {
-        throw std::out_of_range("Out of range"); //Исключение
+        throw std::out_of_range("Out of range");
     }
 
-    node<T>* tmp = head;
-    T pop = head->item;
+    if(length > 0)
+    {
+        node<T>* tmp = head;
+        const T pop = head->item;
 
-    head = head->next;
-    if(length == 1)
-        tail = NULL;
+        head = head->next;
+        if(length == 1)
+            tail = nullptr;
 
-    delete tmp;
+        delete tmp;
+        length--;
 
-    length--;
-    return pop;
+        return pop;
+    }
 }
 
 /*Очистить весь список.*/
 template <typename T>
 void order_list<T>::clear() {
-    while (length != 0) {
-        dequeue();
+    if ( !this->isEmpty() )
+    {
+        while (length != 0) {
+            dequeue_withoutReturn();
+        }
+    }
+}
+
+/*Конкатенация this + B*/
+template <typename T>
+order_list<T> order_list<T>::concatenation(order_list<T> B){
+    if ( (head== nullptr) && (tail == nullptr) && (length == 0) )
+    {
+        return B;
+    } else if( (B.head == nullptr) && (B.tail == nullptr) && (B.length == 0) )
+    {
+        return *this;
+    } else {
+        order_list<T> concatResult;
+        concatResult.head = head;
+        concatResult.tail = tail;
+        concatResult.length = length;
+
+        concatResult.tail->next = B.head;
+        concatResult.tail = B.tail;
+        concatResult.length += B.length;
+
+        return concatResult;
+    }
+}
+
+/*Извлечь подпоследовательность по заданным индексам*/
+template <typename T>
+order_list<T> order_list<T>::subsequenceByIndexes(int from, int to)
+{
+    /*try
+    {
+        if ( (length <= 0) || (from <= 0) || (from > length) || (to <= 0) || (to > length) )
+        {
+            throw 666;
+        }
+    }
+    catch(int i)//сюда передастся строка
+    {
+        cout << "Error. It is not possible to extract a subsequence."<< endl;
+    }*/
+
+    if ( (length <= 0) || (from <= 0) || (from > length) || (to <= 0) || (to > length) || (from > to) ){
+        throw std::out_of_range("Out of range");
+    }
+
+    order_list<T> subsequence;
+
+    if ( (length <= 0) || (from <= 0) || (from > length) || (to <= 0) || (to > length) ) //в случае ошибки можно возвращать пустой список
+        return  subsequence;
+    else
+    {
+        int counter = 1;
+        node<T>* tmpPtr = head;
+        while(tmpPtr != nullptr)
+        {
+            if( (counter >= from) && (counter <= to) )
+            {
+                subsequence.enqueue(tmpPtr->item);
+            }
+            tmpPtr = tmpPtr->next;
+            counter++;
+        }
+
+        return subsequence;
+    }
+}
+
+/*Поиск на вхождение подпоследовательности.*/
+template <typename T>
+bool order_list<T>::searchSubsequence(order_list<T> subsequence) //straight search
+{
+    if ( subsequence.length > this->length)
+        return false;
+    else
+    {
+        node<T>* mainPtr = head; //указатель на элемент в списке, где ищется подпоследовательность
+        // всегда сдвигается
+        int i = 1; //индекс этого элемента, чтобы вовремя выйти из списка
+        node<T>* subPtr = subsequence.head;
+        int counter = 0; //количество совпадений подряд
+
+        while(i + subsequence.length - 1 <= length && counter < subsequence.length)
+        {
+            if(mainPtr->item == subPtr->item)
+            {
+                mainPtr = mainPtr->next;
+                i++;
+                subPtr = subPtr->next;
+                counter++;
+            } else
+            {
+                counter = 0; //количество совпадений обнуляется
+                subPtr = subsequence.head;
+                mainPtr = mainPtr->next;
+                i++;
+            }
+        }
+
+        if(counter == subsequence.length)
+            return true;
+        else return false;
     }
 }
 
@@ -92,127 +206,27 @@ const int order_list<T>::get_length() const {
     return length;
 }
 
-/*Конкатенация*/
+/*Проверка списка неа пустоту.*/
 template <typename T>
-order_list<T> order_list<T>::concatenation(order_list<T> B){
-    order_list<T> concatResult;
-    concatResult.head = head;
-    concatResult.tail = tail;
-    concatResult.length = length;
-
-    concatResult.tail->next = B.head;
-    concatResult.tail = B.tail;
-    concatResult.length += B.length;
-
-    return concatResult;
+bool order_list<T>::isEmpty ()
+{
+    if ((length == 0) && (head == NULL) && (tail == NULL))
+        return true;
+    else return false;
 }
-/*
- Добавить к текущему списку список new_list
- */
-/*
+
 template <typename T>
-void circular_list<T>::append(const circular_list<T> &new_list) {
-    int list_length = new_list.get_length();
-    for (int i = 0; i < list_length; i++) {
-        T new_item = new_list.get_item(i);
-        push_back(new_item);
+void order_list<T>::orderCout()
+{
+    node<T>* currentPtr = head;
+    cout << "Order: ";
+    while (currentPtr != nullptr)
+    {
+        cout << currentPtr->item << " ";
+        currentPtr = currentPtr->next;
     }
-}
-*/
-/*
- Обработать список методом reduce
- */
-/*
-template <typename T>
-template <typename U>U circular_list<T>::reduce(U (*reduce_function)(U,T), U initial_value) {
-    if (length == 0) {
-        return initial_value;
-    }
-
-    U current_result  = initial_value;
-
-    bool loop_started;
-    node<T>* i;
-    for (i = head, loop_started = false; (i != head) || !loop_started; i = i->next, loop_started = true) {
-        current_result = reduce_function(current_result, i->item);
-    }
-
-    return current_result;
-}
-*/
-/*
- Поменять местами элементы node_1 и node_2
- */
-/*
-template <typename T>
-void circular_list<T>::swap(node<T> *node_1, node<T> *node_2) {
-    T tmp_item = node_1->item;
-    node_1->item = node_2->item;
-    node_2->item = tmp_item;
-}
-*/
-/*
- Сортировка списка по функции compare_function методом пузырька
- */
-/*
-template <typename T>
-void circular_list<T>::sort(bool (*compare_function)(T,T)) {
-    if (length == 0) {
-        return;
-    }
-
-    bool started_i = false;
-    for (node<T>* i = head; (i != head) || !started_i; i = i->next) {
-        started_i = true;
-        bool started_j = false;
-        for (node<T>* j = i; (j != head) || !started_j; j = j->next) {
-            started_j = true;
-            if (compare_function(i->item, j->item) == false) {
-                swap(i, j);
-            }
-        }
-    }
-}
-*/
-
-/*
- Получить узел (не сам элемент!) списка с идентификатором index
- */
-/*
-template <typename T>
-const node<T>* circular_list<T>::get_element(int index) const {
-    if ((0 > index) || (index >= length )) {
-        throw std::out_of_range("Out of range");
-    }
-
-    node<T>* res_node = head;
-
-    // разных обход в зависимости от местоположения элемента
-    if (index <= length/2) {
-        for (int i = 0; i < index; i++) {
-            res_node = res_node->next;
-        }
-    } else {
-        for (int i = length; i > index; i--) {
-            res_node = res_node->prev;
-        }
-    }
-
-    return res_node;
+    cout << endl;
 }
 
-template <typename T>
-const T circular_list<T>::get_item(int index) const {
-    const node<T>* res_node = get_element(index);
-
-    return res_node->item;
-}
-
-// перегрузка операторов
-
-template <typename T>
-T circular_list<T>::operator[] (const int index) {
-    return get_item(index);
-}
-*/
-
+template class order_list<int>;
+template class order_list<string>;

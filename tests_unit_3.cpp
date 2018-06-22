@@ -23,7 +23,7 @@
  Тест 8: Попытка очистить пустую очередь.
  */
 
-#include "tests_unit_2.h"
+#include "tests_unit_3.h"
 #include <iostream>
 
 using namespace std;

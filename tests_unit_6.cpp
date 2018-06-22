@@ -10,7 +10,7 @@
 
  */
 
-#include "tests_unit_1.h"
+#include "tests_unit_6.h"
 #include <iostream>
 
 using namespace std;
